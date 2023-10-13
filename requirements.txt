@@ -1,0 +1,6 @@
+Flask==2.3.3
+flask-restx==1.1.0
+waitress==2.1.2
+matplotlib==3.7.3
+scikit-learn==1.2.1
+sycopg2-binary==2.9.9
