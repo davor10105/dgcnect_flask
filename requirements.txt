@@ -4,3 +4,5 @@ waitress==2.1.2
 matplotlib==3.7.3
 scikit-learn==1.2.1
 sycopg2-binary==2.9.9
+clean-text==0.6.0
+simplemma==0.9.1

@@ -1,6 +1,6 @@
 from flask import Flask, request, abort
 from flask_restx import Resource, Api, fields
-from model import CountryModel
+from model import PostgresCountryModel
 from waitress import serve
 from flask_cors import CORS
 
@@ -15,7 +15,7 @@ api = Api(
     description="API for visualizing model outputs",
 )
 
-model = CountryModel()
+model = PostgresCountryModel()
 
 dgcnect_ns = api.namespace(
     "dgcnect", description="Used to visualize specific outputs of the TF-IDF model"
