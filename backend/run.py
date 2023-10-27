@@ -3,6 +3,7 @@ from flask_restx import Resource, Api, fields
 from model import PostgresCountryModel
 from waitress import serve
 from flask_cors import CORS
+import time
 
 
 app = Flask(__name__)
@@ -28,6 +29,9 @@ countries_model = api.model(
 country_details_model = api.model(
     "CountryDetails", {"Country": countries_model, "Details": fields.Arbitrary}
 )
+
+stop_words = api.model("StopWords", {"StopWords": fields.List(fields.String)})
+annotation = api.model("Annotation", {"Annotation": fields.Integer})
 
 question_model = api.model("Question", {"QuestionText": fields.String})
 predicted_intent = api.model(
@@ -57,7 +61,7 @@ class CountryData(Resource):
 class CountryDetails(Resource):
     # @api.response(200, "Success", [country_details_model])
     # @api.response(400, "Error")
-    def post(self, country2alpha):
+    def get(self, country2alpha):
         # try:
         return model.get_country_data(country=country2alpha)
         # except Exception as e:
@@ -68,7 +72,7 @@ class CountryDetails(Resource):
 class GlobalExplanation(Resource):
     # @api.response(200, "Success", [country_details_model])
     # @api.response(400, "Error")
-    def post(self, country2alpha):
+    def get(self, country2alpha):
         # try:
         return model.get_global_data(country=country2alpha)
         # except Exception as e:
@@ -79,10 +83,44 @@ class GlobalExplanation(Resource):
 class CountryDetails(Resource):
     # @api.response(200, "Success", [country_details_model])
     # @api.response(400, "Error")
-    def post(self, country2alpha, tender_id):
+    def get(self, country2alpha, tender_id):
         print(country2alpha, tender_id)
         # try:
         return model.get_tender_data(country=country2alpha, tender_id=tender_id)
+        # except Exception as e:
+        #    abort(400, str(e))
+
+
+@dgcnect_ns.route("/retrain_country/<string:country2alpha>")
+class RetrainCountry(Resource):
+    # @api.response(200, "Success", [country_details_model])
+    # @api.response(400, "Error")
+    @api.expect(stop_words)
+    def post(self, country2alpha):
+        data = request.get_json()
+        print(country2alpha, data)
+        # try:
+
+        model.retrain_country(country=country2alpha, stop_words=data["StopWords"])
+        return 200, "Success"
+        # except Exception as e:
+        #    abort(400, str(e))
+
+
+@dgcnect_ns.route("/annotate_tender/<string:country2alpha>/<string:tender_id>")
+class AnnotateTender(Resource):
+    # @api.response(200, "Success", [country_details_model])
+    # @api.response(400, "Error")
+    @api.expect(annotation)
+    def post(self, country2alpha, tender_id):
+        data = request.get_json()
+        annotation = data["Annotation"]
+        print(country2alpha, annotation)
+        model.annotate_tender(country2alpha, tender_id, annotation)
+        print("run success")
+        # try:
+        return 200, "Success"
+        # return model.retrain_country(country=country2alpha, stop_words=stop_words)
         # except Exception as e:
         #    abort(400, str(e))
 

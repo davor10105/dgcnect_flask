@@ -12,6 +12,7 @@ RANDOM_SEED = 69
 class Trainer:
     def train(dataset, language, stop_words=[]):
         examples = []
+        print("Cleaning data...")
         for example in dataset:
             text = example[3] + example[4]
             text = clean(
@@ -61,12 +62,18 @@ class Trainer:
         test_texts = [example["input_text"] for example in test_examples]
         test_labels = np.array([example["label"] for example in test_examples])
 
-        stop_words = [lemmatize(stop_word, lang=language) for stop_word in stop_words]
-        vectorizer = TfidfVectorizer(max_df=0.05)
-        _ = vectorizer.fit_transform(train_texts)
-        all_stop_words = list(vectorizer.stop_words_) + stop_words
+        print("Obtaining stop words...")
+        if len(stop_words) == 0:
+            vectorizer = TfidfVectorizer(max_df=0.5, min_df=0.02)
+            _ = vectorizer.fit_transform(train_texts)
+            stop_words = list(vectorizer.stop_words_)
+        else:
+            stop_words = [
+                lemmatize(stop_word, lang=language) for stop_word in stop_words
+            ]
 
-        vectorizer = TfidfVectorizer(max_df=0.5, stop_words=all_stop_words)
+        print("Training model...")
+        vectorizer = TfidfVectorizer(stop_words=stop_words)
         train_features = vectorizer.fit_transform(train_texts)
         test_features = vectorizer.transform(test_texts)
         clf = LogisticRegression(
@@ -74,6 +81,7 @@ class Trainer:
         ).fit(train_features, train_labels)
 
         all_texts = [example["input_text"] for example in examples]
+        all_tender_ids = [example["tender_id"] for example in examples]
         all_labels = np.array([example["label"] for example in examples])
         all_features = vectorizer.transform(all_texts)
         all_preds = clf.predict(all_features)
@@ -81,8 +89,10 @@ class Trainer:
         model_data = (
             clf,
             vectorizer,
-            (all_features, all_preds, all_labels),
+            stop_words,
+            (all_features, all_preds, all_labels, all_tender_ids),
             examples,
         )
+        print("Success")
 
         return model_data

@@ -9,6 +9,7 @@ import psycopg2
 import trainer
 import pickle
 from database_login import DBNAME, USER, PASSWORD, HOST, PORT
+import codecs
 
 
 alpha2name = {
@@ -29,14 +30,7 @@ country2language = {
 
 class PostgresCountryModel:
     def __init__(self) -> None:
-        self.conn = psycopg2.connect(
-            dbname=DBNAME,
-            user=USER,
-            password=PASSWORD,
-            host=HOST,
-            port=PORT,
-        )
-        self.cur = self.conn.cursor()
+        self.connect_database()
         self.cur.execute("select distinct country_iso from dataset")
         countries = self.cur.fetchall()
         countries = [country[0] for country in countries]
@@ -70,6 +64,7 @@ class PostgresCountryModel:
             (
                 clf,
                 vectorizer,
+                stop_words,
                 _,
                 _,
             ) = self.country_model_data[country]
@@ -78,23 +73,95 @@ class PostgresCountryModel:
             score_key = sorted(score_key, reverse=True, key=lambda k: k[1])
             self.global_data[country] = score_key
 
+    def connect_database(self):
+        self.conn = psycopg2.connect(
+            dbname=DBNAME,
+            user=USER,
+            password=PASSWORD,
+            host=HOST,
+            port=PORT,
+        )
+        self.cur = self.conn.cursor()
+
+    def retrain_country(self, country, stop_words=[]):
+        country_dataset = self.fetch_dataset(country)
+        (_, _, old_stop_words, _, _) = self.country_model_data[country]
+        model_data = trainer.Trainer.train(
+            country_dataset,
+            country2language[country],
+            stop_words=stop_words + old_stop_words,
+        )
+
+        with open(f"data/{country}.pickle", "wb") as f:
+            pickle.dump(model_data, f)
+
     def fetch_dataset(self, country):
         self.cur.execute(f"SELECT * FROM dataset where country_iso='{country}'")
         dataset = self.cur.fetchall()
 
         return dataset
 
+    def annotate_tender(self, country, tender_id, annotation):
+        # self.connect_database()
+        # self.cur.execute(
+        #    f"UPDATE dataset SET innovation_label={annotation} WHERE country_iso='{country}' AND dgcnect_tender_id={tender_id}"
+        # )
+
+        print(
+            f"UPDATE dataset SET innovation_label={annotation} WHERE country_iso='{country}' AND dgcnect_tender_id={tender_id}"
+        )
+
+        """(
+            clf,
+            vectorizer,
+            (all_features, all_preds, all_labels, all_tender_ids),
+            examples,
+        ) = self.country_model_data[country]
+
+        print("kita1")
+        tender_index = all_tender_ids.index(tender_id)
+        print("kita2")
+        all_labels[tender_index] = annotation
+        model_data = (
+            clf,
+            vectorizer,
+            (all_features, all_preds, all_labels, all_tender_ids),
+            examples,
+        )
+        with open(f"data/{country}.pickle", "wb") as f:
+            pickle.dump(model_data, f)"""
+        print("annotated")
+
     def get_countries_data(self):
         retval = []
         for key in self.country_model_data.keys():
-            retval.append({"CountryName": alpha2name[key], "Country2Alpha": key})
+            (
+                clf,
+                vectorizer,
+                stop_words,
+                (all_features, all_preds, all_labels, all_tender_ids),
+                examples,
+            ) = self.country_model_data[key]
+            metadata_dict = {
+                "NumExamples": all_preds.shape[0],
+                "NumInnovative": all_labels.sum().item(),
+                "NumNonInnovative": (all_preds.shape[0] - all_labels.sum()).item(),
+            }
+            retval.append(
+                {
+                    "CountryName": alpha2name[key],
+                    "Country2Alpha": key,
+                    "Metadata": metadata_dict,
+                }
+            )
         return retval
 
     def calculate_details_for_country(self, country):
         (
             clf,
             vectorizer,
-            (all_features, all_preds, all_labels),
+            stop_words,
+            (all_features, all_preds, all_labels, all_tender_ids),
             examples,
         ) = self.country_model_data[country]
         metadata_dict = {
@@ -108,17 +175,27 @@ class PostgresCountryModel:
             "FalsePositive": [],
             "FalseNegative": [],
         }
-        for i, (all_label, all_pred) in enumerate(zip(all_labels, all_preds)):
+        for i, (all_label, all_pred, all_tender_id) in enumerate(
+            zip(all_labels, all_preds, all_tender_ids)
+        ):
             if all_label == 1:
                 if all_label == all_pred:
-                    selected_prediction_type_dict["TruePositive"].append(str(i))
+                    selected_prediction_type_dict["TruePositive"].append(
+                        str(all_tender_id)
+                    )
                 else:
-                    selected_prediction_type_dict["FalseNegative"].append(str(i))
+                    selected_prediction_type_dict["FalseNegative"].append(
+                        str(all_tender_id)
+                    )
             else:
                 if all_label == all_pred:
-                    selected_prediction_type_dict["TrueNegative"].append(str(i))
+                    selected_prediction_type_dict["TrueNegative"].append(
+                        str(all_tender_id)
+                    )
                 else:
-                    selected_prediction_type_dict["FalsePositive"].append(str(i))
+                    selected_prediction_type_dict["FalsePositive"].append(
+                        str(all_tender_id)
+                    )
         self.detailed_country_data[country] = {
             "Metadata": metadata_dict,
             "Details": selected_prediction_type_dict,
@@ -138,12 +215,15 @@ class PostgresCountryModel:
         (
             clf,
             vectorizer,
-            (all_features, all_preds, all_labels),
+            stop_words,
+            (all_features, all_preds, all_labels, all_tender_ids),
             examples,
         ) = self.country_model_data[country]
 
-        tender_index = int(tender_id)
+        tender_index = all_tender_ids.index(tender_id)
 
+        tender_prediction = all_preds[tender_index].tolist()
+        tender_label = all_labels[tender_index].tolist()
         word_scores = all_features[tender_index].multiply(clf.coef_[0]).tocsr()
         scored_words = []
         total_score = all_features[tender_index].dot(clf.coef_[0])
@@ -164,7 +244,7 @@ class PostgresCountryModel:
                 word_score[lemma_word] = 0
             if lemma_word not in lemma_original:
                 lemma_original[lemma_word] = []
-            word_score[lemma_word] = score
+            word_score[lemma_word] += score
             lemma_original[lemma_word].append(original_word)
 
             scored_words.append([original_word, score])
@@ -236,8 +316,15 @@ class PostgresCountryModel:
         plt.savefig(buf, format="png")
         buf.seek(0)
         byte_image = buf.read().hex()
+        b64_image = codecs.encode(codecs.decode(byte_image, "hex"), "base64").decode()
+        plt.close()
 
-        return {"WordScores": scored_words, "Plot": byte_image}
+        return {
+            "WordScores": scored_words,
+            "Plot": b64_image,
+            "Prediction": tender_prediction,
+            "Label": tender_label,
+        }
 
 
 class CountryModel:
