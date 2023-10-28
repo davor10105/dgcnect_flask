@@ -62,15 +62,11 @@ class Trainer:
         test_texts = [example["input_text"] for example in test_examples]
         test_labels = np.array([example["label"] for example in test_examples])
 
-        print("Obtaining stop words...")
         if len(stop_words) == 0:
-            vectorizer = TfidfVectorizer(max_df=0.5, min_df=0.02)
+            print("Obtaining stop words...")
+            vectorizer = TfidfVectorizer(max_df=0.5)
             _ = vectorizer.fit_transform(train_texts)
             stop_words = list(vectorizer.stop_words_)
-        else:
-            stop_words = [
-                lemmatize(stop_word, lang=language) for stop_word in stop_words
-            ]
 
         print("Training model...")
         vectorizer = TfidfVectorizer(stop_words=stop_words)

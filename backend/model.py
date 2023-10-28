@@ -60,18 +60,7 @@ class PostgresCountryModel:
 
         self.global_data = {}
         for country in self.country_model_data:
-            score_key = []
-            (
-                clf,
-                vectorizer,
-                stop_words,
-                _,
-                _,
-            ) = self.country_model_data[country]
-            for key, index in vectorizer.vocabulary_.items():
-                score_key.append((key, clf.coef_[0][index]))
-            score_key = sorted(score_key, reverse=True, key=lambda k: k[1])
-            self.global_data[country] = score_key
+            self.calculate_global_data(country)
 
     def connect_database(self):
         self.conn = psycopg2.connect(
@@ -95,25 +84,26 @@ class PostgresCountryModel:
         with open(f"data/{country}.pickle", "wb") as f:
             pickle.dump(model_data, f)
 
+        self.country_model_data[country] = model_data
+        self.calculate_global_data(country)
+
     def fetch_dataset(self, country):
+        print("Fetching data...")
         self.cur.execute(f"SELECT * FROM dataset where country_iso='{country}'")
         dataset = self.cur.fetchall()
 
         return dataset
 
     def annotate_tender(self, country, tender_id, annotation):
-        # self.connect_database()
-        # self.cur.execute(
-        #    f"UPDATE dataset SET innovation_label={annotation} WHERE country_iso='{country}' AND dgcnect_tender_id={tender_id}"
-        # )
-
-        print(
+        self.cur.execute(
             f"UPDATE dataset SET innovation_label={annotation} WHERE country_iso='{country}' AND dgcnect_tender_id={tender_id}"
         )
+        self.conn.commit()
 
-        """(
+        (
             clf,
             vectorizer,
+            stop_words,
             (all_features, all_preds, all_labels, all_tender_ids),
             examples,
         ) = self.country_model_data[country]
@@ -125,11 +115,12 @@ class PostgresCountryModel:
         model_data = (
             clf,
             vectorizer,
+            stop_words,
             (all_features, all_preds, all_labels, all_tender_ids),
             examples,
         )
         with open(f"data/{country}.pickle", "wb") as f:
-            pickle.dump(model_data, f)"""
+            pickle.dump(model_data, f)
         print("annotated")
 
     def get_countries_data(self):
@@ -204,6 +195,20 @@ class PostgresCountryModel:
     def get_country_data(self, country):
         self.calculate_details_for_country(country=country)
         return self.detailed_country_data[country]
+
+    def calculate_global_data(self, country):
+        score_key = []
+        (
+            clf,
+            vectorizer,
+            stop_words,
+            _,
+            _,
+        ) = self.country_model_data[country]
+        for key, index in vectorizer.vocabulary_.items():
+            score_key.append((key, clf.coef_[0][index]))
+        score_key = sorted(score_key, reverse=True, key=lambda k: k[1])
+        self.global_data[country] = score_key
 
     def get_global_data(self, country):
         return {
