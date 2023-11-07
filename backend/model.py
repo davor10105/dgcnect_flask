@@ -40,7 +40,7 @@ class PostgresCountryModel:
         self.close_database_connection()
 
         countries = [country[0] for country in countries]
-        countries = ["HR", "BG"]
+        countries = ["BE", "HR", "BG"]
 
         if not os.path.exists("data"):
             os.makedirs("data")
