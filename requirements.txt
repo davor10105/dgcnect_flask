@@ -7,3 +7,4 @@ psycopg2-binary==2.9.9
 clean-text==0.6.0
 simplemma==0.9.1
 flask_cors==4.0.0
+tqdm==4.66.1
