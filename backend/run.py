@@ -51,10 +51,10 @@ class CountryData(Resource):
     @api.response(200, "Success", [countries_model])
     @api.response(400, "Error")
     def get(self):
-        # try:
-        return model.get_countries_data()
-        # except Exception as e:
-        #    abort(400, str(e))
+        try:
+            return model.get_countries_data()
+        except Exception as e:
+            abort(400, str(e))
 
 
 @dgcnect_ns.route("/country_details/<string:country2alpha>")
@@ -62,10 +62,10 @@ class CountryDetails(Resource):
     # @api.response(200, "Success", [country_details_model])
     # @api.response(400, "Error")
     def get(self, country2alpha):
-        # try:
-        return model.get_country_data(country=country2alpha)
-        # except Exception as e:
-        #    abort(400, str(e))
+        try:
+            return model.get_country_data(country=country2alpha)
+        except Exception as e:
+            abort(400, str(e))
 
 
 @dgcnect_ns.route("/global_explanation/<string:country2alpha>")
@@ -73,10 +73,10 @@ class GlobalExplanation(Resource):
     # @api.response(200, "Success", [country_details_model])
     # @api.response(400, "Error")
     def get(self, country2alpha):
-        # try:
-        return model.get_global_data(country=country2alpha)
-        # except Exception as e:
-        #    abort(400, str(e))
+        try:
+            return model.get_global_data(country=country2alpha)
+        except Exception as e:
+            abort(400, str(e))
 
 
 @dgcnect_ns.route("/tender_details/<string:country2alpha>/<string:tender_id>")
@@ -85,10 +85,10 @@ class CountryDetails(Resource):
     # @api.response(400, "Error")
     def get(self, country2alpha, tender_id):
         print(country2alpha, tender_id)
-        # try:
-        return model.get_tender_data(country=country2alpha, tender_id=tender_id)
-        # except Exception as e:
-        #    abort(400, str(e))
+        try:
+            return model.get_tender_data(country=country2alpha, tender_id=tender_id)
+        except Exception as e:
+            abort(400, str(e))
 
 
 @dgcnect_ns.route("/retrain_country/<string:country2alpha>")
@@ -99,12 +99,11 @@ class RetrainCountry(Resource):
     def post(self, country2alpha):
         data = request.get_json()
         print(country2alpha, data)
-        # try:
-
-        model.retrain_country(country=country2alpha, stop_words=data["StopWords"])
-        return 200, "Success"
-        # except Exception as e:
-        #    abort(400, str(e))
+        try:
+            model.retrain_country(country=country2alpha, stop_words=data["StopWords"])
+            return 200, "Success"
+        except Exception as e:
+            abort(400, str(e))
 
 
 @dgcnect_ns.route("/annotate_tender/<string:country2alpha>/<string:tender_id>")
@@ -116,13 +115,14 @@ class AnnotateTender(Resource):
         data = request.get_json()
         annotation = data["Annotation"]
         print(country2alpha, annotation)
-        model.annotate_tender(country2alpha, tender_id, annotation)
-        print("run success")
-        # try:
-        return 200, "Success"
+        try:
+            model.annotate_tender(country2alpha, tender_id, annotation)
+            print("run success")
+            # try:
+            return 200, "Success"
         # return model.retrain_country(country=country2alpha, stop_words=stop_words)
-        # except Exception as e:
-        #    abort(400, str(e))
+        except Exception as e:
+            abort(400, str(e))
 
 
 """@chatbot_ns.route("/query")
