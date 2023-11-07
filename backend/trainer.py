@@ -4,6 +4,7 @@ from simplemma import simple_tokenizer, lemmatize
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+from tqdm import tqdm
 
 
 RANDOM_SEED = 69
@@ -13,7 +14,7 @@ class Trainer:
     def train(dataset, language, stop_words=[]):
         examples = []
         print("Cleaning data...")
-        for example in dataset:
+        for example in tqdm(dataset):
             text = example[3] + example[4]
             text = clean(
                 text,
