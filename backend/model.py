@@ -21,12 +21,14 @@ alpha2name = {
     "IT": "Italy",
     "FR": "France",
     "BE": "Belgium",
+    "BG": "Bulgaria",
 }
 
 # map country to language tokenizer
 country2language = {
     "HR": "hbs",
     "BE": "nl",
+    "BG": "be",
 }
 
 
@@ -38,7 +40,7 @@ class PostgresCountryModel:
         self.close_database_connection()
 
         countries = [country[0] for country in countries]
-        countries = ["HR"]
+        countries = ["HR", "BE", "BG"]
 
         if not os.path.exists("data"):
             os.makedirs("data")
