@@ -35,6 +35,8 @@ class PostgresCountryModel:
         self.connect_database()
         self.cur.execute("select distinct country_iso from dataset")
         countries = self.cur.fetchall()
+        self.close_database_connection()
+
         countries = [country[0] for country in countries]
 
         if not os.path.exists("data"):
@@ -74,6 +76,10 @@ class PostgresCountryModel:
         )
         self.cur = self.conn.cursor()
 
+    def close_database_connection(self):
+        self.cur.close()
+        self.conn.close()
+
     def retrain_country(self, country, stop_words=[]):
         country_dataset = self.fetch_dataset(country)
         (_, _, old_stop_words, _, _) = self.country_model_data[country]
@@ -91,16 +97,20 @@ class PostgresCountryModel:
 
     def fetch_dataset(self, country):
         print("Fetching data...")
+        self.connect_database()
         self.cur.execute(f"SELECT * FROM dataset where country_iso='{country}'")
         dataset = self.cur.fetchall()
+        self.close_database_connection()
 
         return dataset
 
     def annotate_tender(self, country, tender_id, annotation):
+        self.connect_database()
         self.cur.execute(
             f"UPDATE dataset SET innovation_label={annotation} WHERE country_iso='{country}' AND dgcnect_tender_id={tender_id}"
         )
         self.conn.commit()
+        self.close_database_connection()
 
         (
             clf,
