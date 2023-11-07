@@ -64,7 +64,7 @@ class Trainer:
 
         if len(stop_words) == 0:
             print("Obtaining stop words...")
-            vectorizer = TfidfVectorizer(max_df=0.5)
+            vectorizer = TfidfVectorizer(max_df=0.05)
             _ = vectorizer.fit_transform(train_texts)
             stop_words = list(vectorizer.stop_words_)
 

@@ -20,11 +20,13 @@ alpha2name = {
     "NL": "The Netherlands",
     "IT": "Italy",
     "FR": "France",
+    "BE": "Belgium",
 }
 
 # map country to language tokenizer
 country2language = {
     "HR": "hbs",
+    "BE": "nl",
 }
 
 
@@ -202,19 +204,38 @@ class PostgresCountryModel:
             clf,
             vectorizer,
             stop_words,
-            _,
-            _,
+            (all_features, all_preds, all_labels, all_tender_ids),
+            examples,
         ) = self.country_model_data[country]
+        score_key = []
         for key, index in vectorizer.vocabulary_.items():
-            score_key.append((key, clf.coef_[0][index]))
+            score_key.append((key, clf.coef_[0][index], index))
         score_key = sorted(score_key, reverse=True, key=lambda k: k[1])
-        self.global_data[country] = score_key
+
+        top_score_key_tenders = []
+        for token, score, word_index in score_key[:100]:
+            tender_appears = all_features[:, word_index].nonzero()[0]
+            tender_id_appears = [
+                all_tender_ids[tender_appear] for tender_appear in tender_appears
+            ]
+            top_score_key_tenders.append((token, score, tender_id_appears))
+
+        bottom_score_key_tenders = []
+        for token, score, word_index in score_key[-100:]:
+            tender_appears = all_features[:, word_index].nonzero()[0]
+            tender_id_appears = [
+                all_tender_ids[tender_appear] for tender_appear in tender_appears
+            ]
+            bottom_score_key_tenders.append((token, score, tender_id_appears))
+        bottom_score_key_tenders = bottom_score_key_tenders[::-1]
+
+        self.global_data[country] = {
+            "TopWords": top_score_key_tenders,
+            "BottomWords": bottom_score_key_tenders,
+        }
 
     def get_global_data(self, country):
-        return {
-            "TopWords": self.global_data[country][:100],
-            "BottomWords": self.global_data[country][-100:][::-1],
-        }
+        return self.global_data[country]
 
     def get_tender_data(self, country, tender_id):
         (
