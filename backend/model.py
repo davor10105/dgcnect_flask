@@ -28,7 +28,7 @@ alpha2name = {
 country2language = {
     "HR": "hbs",
     "BE": "nl",
-    "BG": "be",
+    "BG": "bg",
 }
 
 
@@ -40,7 +40,7 @@ class PostgresCountryModel:
         self.close_database_connection()
 
         countries = [country[0] for country in countries]
-        countries = ["HR", "BE", "BG"]
+        countries = ["HR", "BG"]
 
         if not os.path.exists("data"):
             os.makedirs("data")
