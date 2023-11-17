@@ -11,6 +11,7 @@ import pickle
 from database_login import DBNAME, USER, PASSWORD, HOST, PORT
 import codecs
 from model_data import CountryModelData
+from config import NUM_WORDS
 
 
 alpha2name = {
@@ -312,7 +313,7 @@ class PostgresCountryModel:
                 word_score[lemma_word] = 0
             if lemma_word not in lemma_original:
                 lemma_original[lemma_word] = []
-            word_score[lemma_word] += score
+            word_score[lemma_word] = score
             lemma_original[lemma_word].append(original_word)
 
             scored_words.append([original_word, score])
@@ -328,54 +329,129 @@ class PostgresCountryModel:
         )
         ax.axvline(x=0, color="black", label="zero", linestyle="dashed")
 
-        top_keys = list(word_score.keys())[-5:]
+        current_word_index = 0
+        top_keys = list(word_score.keys())  # [-NUM_WORDS:]
         top_keys.reverse()
+        positive_other_sum = 0.0
         for i, lemma_word in enumerate(top_keys):
             # if word_score[lemma_word] == 0:
             #    continue
-            ax.barh(i, current_sum + word_score[lemma_word], align="center", color="r")
-            ax.barh(i, current_sum, align="center", color="white")
-            current_sum += word_score[lemma_word]
-            vis_words.append(lemma_original[lemma_word][0].lower())
-            ax.text(
-                current_sum + 0.1,
-                i,
-                str(round(word_score[lemma_word], 2)),
-                color="r",
-                va="center",
-            )
 
-        bot_keys = list(word_score.keys())[:5]
+            if i < NUM_WORDS and word_score[lemma_word] > 0:
+                ax.barh(
+                    current_word_index,
+                    current_sum + word_score[lemma_word],
+                    align="center",
+                    color="r",
+                )
+                ax.barh(current_word_index, current_sum, align="center", color="white")
+                current_sum += word_score[lemma_word]
+                vis_words.append(lemma_original[lemma_word][0].lower())
+                ax.text(
+                    current_sum + 0.1,
+                    current_word_index,
+                    str(round(word_score[lemma_word], 2)),
+                    color="r",
+                    va="center",
+                )
+                current_word_index += 1
+            elif word_score[lemma_word] > 0:
+                positive_other_sum += word_score[lemma_word]
+            else:
+                break
+        ax.barh(NUM_WORDS, current_sum + positive_other_sum, align="center", color="r")
+        ax.barh(NUM_WORDS, current_sum, align="center", color="white")
+        current_sum += positive_other_sum
+        vis_words.append("remaining POSITIVE")
+        ax.text(
+            current_sum + 0.1,
+            current_word_index,
+            str(round(positive_other_sum, 2)),
+            color="r",
+            va="center",
+        )
+        current_word_index += 1
+
+        bot_keys = list(word_score.keys())  # [:NUM_WORDS]
+        negative_other_sum = 0.0
         # bot_keys.reverse()
         for i, lemma_word in enumerate(bot_keys):
             # if word_score[lemma_word] == 0:
             #    continue
-            if current_sum > 0:
-                zero_to_pos = current_sum + word_score[lemma_word]
-                ax.barh(i + 5, current_sum, align="center", color="b")
-                if zero_to_pos > 0:
-                    ax.barh(i + 5, zero_to_pos, align="center", color="white")
+            if i < NUM_WORDS and word_score[lemma_word] < 0:
+                if current_sum > 0:
+                    zero_to_pos = current_sum + word_score[lemma_word]
+                    ax.barh(current_word_index, current_sum, align="center", color="b")
+                    if zero_to_pos > 0:
+                        ax.barh(
+                            current_word_index,
+                            zero_to_pos,
+                            align="center",
+                            color="white",
+                        )
+                    else:
+                        ax.barh(
+                            current_word_index, current_sum, align="center", color="b"
+                        )
+                        ax.barh(
+                            current_word_index, zero_to_pos, align="center", color="b"
+                        )
                 else:
-                    ax.barh(i + 5, current_sum, align="center", color="b")
-                    ax.barh(i + 5, zero_to_pos, align="center", color="b")
-            else:
-                ax.barh(
-                    i + 5,
-                    current_sum + word_score[lemma_word],
-                    align="center",
-                    color="b",
+                    ax.barh(
+                        current_word_index,
+                        current_sum + word_score[lemma_word],
+                        align="center",
+                        color="b",
+                    )
+                    ax.barh(
+                        current_word_index, current_sum, align="center", color="white"
+                    )
+                ax.text(
+                    current_sum + 0.1,
+                    current_word_index,
+                    str(round(word_score[lemma_word], 2)),
+                    color="blue",
+                    va="center",
                 )
-                ax.barh(i + 5, current_sum, align="center", color="white")
-            ax.text(
-                current_sum + 0.1,
-                i + 5,
-                str(round(word_score[lemma_word], 2)),
-                color="blue",
-                va="center",
+                current_word_index += 1
+                current_sum += word_score[lemma_word]
+                vis_words.append(lemma_original[lemma_word][0].lower())
+            elif word_score[lemma_word] < 0:
+                negative_other_sum += word_score[lemma_word]
+            else:
+                break
+        # draw remainder of negative
+        if current_sum > 0:
+            zero_to_pos = current_sum + negative_other_sum
+            ax.barh(current_word_index, current_sum, align="center", color="b")
+            if zero_to_pos > 0:
+                ax.barh(current_word_index, zero_to_pos, align="center", color="white")
+            else:
+                ax.barh(current_word_index, current_sum, align="center", color="b")
+                ax.barh(current_word_index, zero_to_pos, align="center", color="b")
+        else:
+            ax.barh(
+                current_word_index,
+                current_sum + negative_other_sum,
+                align="center",
+                color="b",
             )
-            current_sum += word_score[lemma_word]
-            vis_words.append(lemma_original[lemma_word][0].lower())
-        ax.set_yticks(np.linspace(0, 10, 10), labels=vis_words)
+            ax.barh(current_word_index, current_sum, align="center", color="white")
+        ax.text(
+            current_sum + 0.1,
+            current_word_index,
+            str(round(negative_other_sum, 2)),
+            color="blue",
+            va="center",
+        )
+        current_word_index += 1
+        current_sum += negative_other_sum
+        vis_words.append("remaining NEGATIVE")
+
+        ax.set_yticks(
+            np.linspace(0, current_word_index + 1, current_word_index + 1),
+            labels=vis_words + [""],
+        )
         ax.invert_yaxis()
         fig.tight_layout()
 
