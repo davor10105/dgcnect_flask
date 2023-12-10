@@ -30,6 +30,22 @@ alpha2name = {
     "LV": "Latvia",
     "NO": "Norway",
     "EL": "Greece",
+    "PL": "Poland",
+    "SK": "Slovakia",
+    "DK": "Denmark",
+    "LT": "Lithuania",
+    "ES": "Spain",
+    "SI": "Slovenia",
+    "CZ": "Czechia",
+    "IT": "Italy",
+    "CY": "Cyprus",
+    "NL": "The Netherlands",
+    "SE": "Sweden",
+    "EE": "Estonia",
+    "FI": "Finland",
+    "DE": "Germany",
+    "LU": "Luxembourg",
+    "IE": "Ireland",
 }
 
 # map country to language tokenizer
@@ -42,6 +58,22 @@ country2language = {
     "LV": "lv",
     "NO": "nn",
     "EL": "el",
+    # "PL": "pl",  only one class
+    "SK": "sk",
+    "DK": "da",
+    "LT": "lt",
+    "ES": "es",
+    "SI": "sl",
+    "CZ": "cs",
+    # "IT": "it",  only 11 examples
+    "CY": "el",
+    "NL": "nl",
+    "SE": "sv",
+    "EE": "et",
+    "FI": "fi",
+    "DE": "de",
+    # "LU": "lb",  only one class
+    "IE": "en",
 }
 
 
@@ -53,8 +85,10 @@ class PostgresCountryModel:
         self.close_database_connection()
 
         countries = [country[0] for country in countries]
-        countries = filter(lambda country: country in country2language, countries)
-        countries = ["HR", "BE", "BG", "HU", "PT", "LV", "NO"]
+        countries = list(filter(lambda country: country in country2language, countries))
+        # countries = ["HR", "BE", "BG", "HU", "PT", "LV", "NO"]
+
+        print(f"Supported countries: {countries}")
 
         if not os.path.exists("data"):
             os.makedirs("data")
@@ -83,6 +117,8 @@ class PostgresCountryModel:
             model_data = CountryModelData.load(country)
             country_model_data[country] = model_data
         self.country_model_data = country_model_data
+
+        print(f"Country model data: {self.country_model_data.keys()}")
 
         self.detailed_country_data = {}
 
