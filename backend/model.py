@@ -330,6 +330,12 @@ class PostgresCountryModel:
             country, example
         )
 
+        preprocessed_str = vectorizer.build_preprocessor()(" ".join(original_words))
+        original_words = vectorizer.build_tokenizer()(preprocessed_str)
+
+        preprocessed_str = vectorizer.build_preprocessor()(" ".join(lemma_words))
+        lemma_words = vectorizer.build_tokenizer()(preprocessed_str)
+
         tender_prediction = tender_prediction.tolist()
         tender_label = int(example[5])
         word_scores = features.multiply(clf.coef_[0]).tocsr()
