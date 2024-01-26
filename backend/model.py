@@ -46,6 +46,7 @@ alpha2name = {
     "DE": "Germany",
     "LU": "Luxembourg",
     "IE": "Ireland",
+    "RO": "Romania",
 }
 
 # map country to language tokenizer
@@ -74,6 +75,7 @@ country2language = {
     "DE": "de",
     # "LU": "lb",  only one class
     "IE": "en",
+    "RO": "ro",
 }
 
 
@@ -87,6 +89,8 @@ class PostgresCountryModel:
         countries = [country[0] for country in countries]
         countries = list(filter(lambda country: country in country2language, countries))
         # countries = ["HR", "BE", "BG", "HU", "PT", "LV", "NO"]
+
+        print("ROMANIA", "RO" in countries)
 
         print(f"Supported countries: {countries}")
 
