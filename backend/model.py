@@ -12,6 +12,7 @@ from database_login import DBNAME, USER, PASSWORD, HOST, PORT
 import codecs
 from model_data import CountryModelData
 from config import NUM_WORDS
+from tqdm import tqdm
 
 
 alpha2name = {
@@ -90,8 +91,6 @@ class PostgresCountryModel:
         countries = list(filter(lambda country: country in country2language, countries))
         # countries = ["HR", "BE", "BG", "HU", "PT", "LV", "NO"]
 
-        print("ROMANIA", "RO" in countries)
-
         print(f"Supported countries: {countries}")
 
         if not os.path.exists("data"):
@@ -111,6 +110,7 @@ class PostgresCountryModel:
                         {language: language_model_data},
                     )
                     current_country_model_data.save()
+                    self.update_predictions(language_model_data.tender_data, country)
                 except Exception as e:
                     print(
                         f"The following error occured during preprocessing for country: {country}, error: {e}"
@@ -144,6 +144,18 @@ class PostgresCountryModel:
         self.cur.close()
         self.conn.close()
 
+    def update_predictions(self, tender_data, country):
+        self.connect_database()
+        for tender_id, prediction in tqdm(
+            zip(tender_data.tender_ids, tender_data.predictions)
+        ):
+            prediction = int(prediction)
+            self.cur.execute(
+                f"UPDATE dataset SET innovation_prediction={prediction} WHERE country_iso='{country}' AND dgcnect_tender_id={tender_id}"
+            )
+        self.conn.commit()
+        self.close_database_connection()
+
     def retrain_country(self, country, stop_words=[]):
         country_dataset = self.fetch_dataset(country)
         language = country2language[country]
@@ -163,6 +175,9 @@ class PostgresCountryModel:
 
         self.country_model_data[country] = new_country_model_data
         self.calculate_global_data(country)
+
+        tender_data = language_model_data.tender_data
+        self.update_predictions(tender_data, country)
 
     def fetch_dataset(self, country):
         print("Fetching data...")
