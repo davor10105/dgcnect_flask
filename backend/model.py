@@ -115,8 +115,10 @@ class PostgresCountryModel:
                     print(
                         f"The following error occured during preprocessing for country: {country}, error: {e}"
                     )
+                    del country2language[country]
 
         country_model_data = {}
+        countries = list(filter(lambda country: country in country2language, countries))
         for country in countries:
             model_data = CountryModelData.load(country)
             country_model_data[country] = model_data
