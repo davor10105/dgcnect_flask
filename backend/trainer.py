@@ -7,6 +7,7 @@ from sklearn.linear_model import LogisticRegression
 from tqdm import tqdm
 from multiprocessing import Pool
 from model_data import TenderData, CountryModelData, LanguageModelData
+from sklearn.dummy import DummyClassifier
 
 
 RANDOM_SEED = 69
@@ -79,9 +80,15 @@ class Trainer:
         vectorizer = TfidfVectorizer(stop_words=stop_words)
         train_features = vectorizer.fit_transform(train_texts)
         test_features = vectorizer.transform(test_texts)
-        clf = LogisticRegression(
-            random_state=RANDOM_SEED, class_weight="balanced", C=0.6
-        ).fit(train_features, train_labels)
+
+        try:
+            clf = LogisticRegression(
+                random_state=RANDOM_SEED, class_weight="balanced", C=0.6
+            ).fit(train_features, train_labels)
+        except:
+            clf = DummyClassifier(strategy="most_frequent").fit(
+                train_features, train_labels
+            )
 
         all_texts = [example["input_text"] for example in examples]
         all_tender_ids = [example["tender_id"] for example in examples]
