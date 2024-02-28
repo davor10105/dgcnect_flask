@@ -48,6 +48,7 @@ alpha2name = {
     "LU": "Luxembourg",
     "IE": "Ireland",
     "RO": "Romania",
+    "MT": "Malta",
 }
 
 # map country to language tokenizer
@@ -77,6 +78,7 @@ country2language = {
     # "LU": "lb",  only one class
     "IE": "en",
     "RO": "ro",
+    "MT": "en",
 }
 
 
