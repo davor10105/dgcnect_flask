@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from tqdm import tqdm
+import re
 from multiprocessing import Pool
 from model_data import TenderData, CountryModelData, LanguageModelData
 from sklearn.dummy import DummyClassifier
@@ -13,10 +14,18 @@ from sklearn.dummy import DummyClassifier
 RANDOM_SEED = 69
 
 
+def clean_text(t):
+    t = re.sub(r"<.*?>", " ", t)
+    t = re.sub(r"[^a-zA-Z0-9.!,?;: ]+", " ", t)
+    t = re.sub(" +", " ", t)
+    t = t.lower()
+    return t
+
+
 class Trainer:
     def return_input(example, language):
         text = example[3] + example[4]
-        text = clean(
+        """text = clean(
             text,
             fix_unicode=True,  # fix various unicode errors
             to_ascii=False,  # transliterate to closest ASCII representation
@@ -37,7 +46,8 @@ class Trainer:
             replace_with_digit="0",
             replace_with_currency_symbol="<CUR>",
             lang="en",  # set to 'de' for German special handling
-        )
+        )"""
+        text = clean_text(text)
 
         tokens = simple_tokenizer(text)
         lemmatized_tokens = [lemmatize(token, lang=language) for token in tokens]
@@ -73,7 +83,7 @@ class Trainer:
 
         if len(stop_words + deleted_words) == 0:
             print("Obtaining stop words...")
-            vectorizer = TfidfVectorizer(max_df=0.05)
+            vectorizer = TfidfVectorizer(max_df=0.02, min_df=2)
             _ = vectorizer.fit_transform(train_texts)
             stop_words = list(vectorizer.stop_words_)
 
@@ -83,7 +93,7 @@ class Trainer:
         test_features = vectorizer.transform(test_texts)
 
         clf = LogisticRegression(
-            random_state=RANDOM_SEED, class_weight="balanced", C=0.6
+            random_state=RANDOM_SEED, class_weight="balanced", C=0.8
         ).fit(train_features, train_labels)
 
         all_texts = [example["input_text"] for example in examples]
