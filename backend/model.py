@@ -63,7 +63,7 @@ country2language = {
     "EL": "el",
     # "PL": "pl",  # only one class
     "SK": "sk",
-    "DK": "da",  # only one class
+    # "DK": "da",  # only one class
     "LT": "lt",
     "ES": "es",
     "SI": "sl",
@@ -79,6 +79,10 @@ country2language = {
     "IE": "en",
     "RO": "ro",
     "MT": "en",
+}
+
+country2language = {
+    "HR": "hbs",
 }
 
 
@@ -160,15 +164,27 @@ class PostgresCountryModel:
         self.conn.commit()
         self.close_database_connection()
 
-    def retrain_country(self, country, stop_words=[]):
+    def retrain_country(self, country, deleted_words=[], reenabled_words=[]):
+        print(f"Processing country: {country}")
         country_dataset = self.fetch_dataset(country)
         language = country2language[country]
         country_model_data = self.country_model_data[country]
+        for reenabled_word in reenabled_words:
+            if (
+                reenabled_word
+                in country_model_data.language_to_model_data[language].deleted_words
+            ):
+                country_model_data.language_to_model_data[
+                    language
+                ].deleted_words.remove(reenabled_word)
         language_model_data = trainer.Trainer.train(
             country_dataset,
             language,
-            stop_words=stop_words
-            + country_model_data.language_to_model_data[language].stop_words,
+            stop_words=country_model_data.language_to_model_data[language].stop_words,
+            deleted_words=country_model_data.language_to_model_data[
+                language
+            ].deleted_words
+            + deleted_words,
         )
 
         new_country_model_data = CountryModelData(
@@ -182,6 +198,7 @@ class PostgresCountryModel:
 
         tender_data = language_model_data.tender_data
         self.update_predictions(tender_data, country)
+        print()
 
     def fetch_dataset(self, country):
         print("Fetching data...")
@@ -208,6 +225,7 @@ class PostgresCountryModel:
         language_model_data = country_model_data.language_to_model_data[language]
 
         tokens, lemmatized_tokens = trainer.Trainer.return_input(example, language)
+        print(len(tokens), len(lemmatized_tokens))
         features = language_model_data.vectorizer.transform(
             [" ".join(lemmatized_tokens)]
         )
@@ -303,7 +321,7 @@ class PostgresCountryModel:
         self.calculate_details_for_country(country=country)
         return self.detailed_country_data[country]
 
-    def calculate_global_data(self, country):
+    def calculate_global_data(self, country, n_words=200):
         score_key = []
         language = country2language[country]
         country_model_data = self.country_model_data[country]
@@ -318,7 +336,9 @@ class PostgresCountryModel:
         score_key = sorted(score_key, reverse=True, key=lambda k: k[1])
 
         top_score_key_tenders = []
-        for token, score, word_index in score_key[:100]:
+        for token, score, word_index in score_key[:n_words]:
+            if score < 0:
+                break
             tender_appears = all_features[:, word_index].nonzero()[0]
             tender_id_appears = [
                 all_tender_ids[tender_appear] for tender_appear in tender_appears
@@ -326,7 +346,9 @@ class PostgresCountryModel:
             top_score_key_tenders.append((token, score, tender_id_appears))
 
         bottom_score_key_tenders = []
-        for token, score, word_index in score_key[-100:]:
+        for token, score, word_index in score_key[-n_words:]:
+            if score > 0:
+                break
             tender_appears = all_features[:, word_index].nonzero()[0]
             tender_id_appears = [
                 all_tender_ids[tender_appear] for tender_appear in tender_appears
@@ -337,6 +359,7 @@ class PostgresCountryModel:
         self.global_data[country] = {
             "TopWords": top_score_key_tenders,
             "BottomWords": bottom_score_key_tenders,
+            "DeletedWords": language_model_data.deleted_words,
         }
 
     def get_global_data(self, country):

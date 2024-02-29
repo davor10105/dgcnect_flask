@@ -43,7 +43,8 @@ class Trainer:
         lemmatized_tokens = [lemmatize(token, lang=language) for token in tokens]
         return tokens, lemmatized_tokens
 
-    def train(dataset, language, stop_words=[]):
+    def train(dataset, language, stop_words=[], deleted_words=[]):
+        print(deleted_words)
         examples = []
         print("Cleaning data...")
         for example in tqdm(dataset):
@@ -62,7 +63,7 @@ class Trainer:
         random.shuffle(examples)
 
         num_train = int(len(examples) * train_ratio)
-        train_examples = examples[:num_train]
+        train_examples = examples  # [:num_train] taking everything for train
         test_examples = examples[num_train:]
 
         train_texts = [example["input_text"] for example in train_examples]
@@ -70,14 +71,14 @@ class Trainer:
         test_texts = [example["input_text"] for example in test_examples]
         test_labels = np.array([example["label"] for example in test_examples])
 
-        if len(stop_words) == 0:
+        if len(stop_words + deleted_words) == 0:
             print("Obtaining stop words...")
             vectorizer = TfidfVectorizer(max_df=0.05)
             _ = vectorizer.fit_transform(train_texts)
             stop_words = list(vectorizer.stop_words_)
 
         print("Training model...")
-        vectorizer = TfidfVectorizer(stop_words=stop_words)
+        vectorizer = TfidfVectorizer(stop_words=stop_words + deleted_words)
         train_features = vectorizer.fit_transform(train_texts)
         test_features = vectorizer.transform(test_texts)
 
@@ -93,7 +94,7 @@ class Trainer:
 
         tender_data = TenderData(all_features, all_preds, all_labels, all_tender_ids)
         language_model_data = LanguageModelData(
-            clf, vectorizer, stop_words, tender_data
+            clf, vectorizer, stop_words, deleted_words, tender_data
         )
         print("Success")
 

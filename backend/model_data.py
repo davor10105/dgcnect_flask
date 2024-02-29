@@ -3,10 +3,11 @@ import pickle
 
 
 class LanguageModelData:
-    def __init__(self, classifier, vectorizer, stop_words, tender_data):
+    def __init__(self, classifier, vectorizer, stop_words, deleted_words, tender_data):
         self.classifier = classifier
         self.vectorizer = vectorizer
         self.stop_words = stop_words
+        self.deleted_words = deleted_words
         self.tender_data = tender_data
 
 

@@ -100,7 +100,11 @@ class RetrainCountry(Resource):
         data = request.get_json()
         print(country2alpha, data)
         try:
-            model.retrain_country(country=country2alpha, stop_words=data["StopWords"])
+            model.retrain_country(
+                country=country2alpha,
+                deleted_words=data["StopWords"],
+                reenabled_words=data["ReEnabledWords"],
+            )
             return 200, "Success"
         except Exception as e:
             abort(400, str(e))
