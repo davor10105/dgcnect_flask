@@ -81,6 +81,11 @@ country2language = {
     "MT": "en",
 }
 
+country2language = {
+    "HR": "hbs",
+    "MT": "en",
+}
+
 
 class PostgresCountryModel:
     def __init__(self) -> None:
@@ -372,11 +377,16 @@ class PostgresCountryModel:
             country, example
         )
 
-        preprocessed_str = vectorizer.build_preprocessor()(" ".join(original_words))
-        original_words = vectorizer.build_tokenizer()(preprocessed_str)
+        # preprocessed_str = vectorizer.build_preprocessor()(" ".join(original_words))
+        # original_words = vectorizer.build_tokenizer()(preprocessed_str)
 
-        preprocessed_str = vectorizer.build_preprocessor()(" ".join(lemma_words))
-        lemma_words = vectorizer.build_tokenizer()(preprocessed_str)
+        # preprocessed_str = vectorizer.build_preprocessor()(" ".join(lemma_words))
+        # lemma_words = vectorizer.build_tokenizer()(preprocessed_str)
+
+        original_words = vectorizer.build_preprocessor()(
+            " ".join(original_words)
+        ).split(" ")
+        lemma_words = vectorizer.build_preprocessor()(" ".join(lemma_words)).split(" ")
 
         tender_prediction = tender_prediction.tolist()
         tender_label = int(example[5])
@@ -400,6 +410,8 @@ class PostgresCountryModel:
             word_score[lemma_word] = score
             lemma_original[lemma_word].append(original_word)
 
+            if original_word == "of" and score != 0:
+                print(original_word, score, lemma_word)
             scored_words.append([original_word, score])
 
         fig, ax = plt.subplots()

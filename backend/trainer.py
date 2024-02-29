@@ -83,7 +83,7 @@ class Trainer:
 
         if len(stop_words + deleted_words) == 0:
             print("Obtaining stop words...")
-            vectorizer = TfidfVectorizer(max_df=0.02, min_df=2)
+            vectorizer = TfidfVectorizer(max_df=0.05, min_df=2)
             _ = vectorizer.fit_transform(train_texts)
             stop_words = list(vectorizer.stop_words_)
 
@@ -93,7 +93,7 @@ class Trainer:
         test_features = vectorizer.transform(test_texts)
 
         clf = LogisticRegression(
-            random_state=RANDOM_SEED, class_weight="balanced", C=0.8
+            random_state=RANDOM_SEED, class_weight="balanced", C=0.3
         ).fit(train_features, train_labels)
 
         all_texts = [example["input_text"] for example in examples]
