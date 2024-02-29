@@ -81,11 +81,6 @@ country2language = {
     "MT": "en",
 }
 
-country2language = {
-    "HR": "hbs",
-    "MT": "en",
-}
-
 
 class PostgresCountryModel:
     def __init__(self) -> None:
