@@ -100,10 +100,14 @@ class RetrainCountry(Resource):
         data = request.get_json()
         print(country2alpha, data)
         try:
+            if "ReEnabledWords" not in data:
+                reenabled_words = []
+            else:
+                reenabled_words = data["ReEnabledWords"]
             model.retrain_country(
                 country=country2alpha,
                 deleted_words=data["StopWords"],
-                reenabled_words=data["ReEnabledWords"],
+                reenabled_words=reenabled_words,
             )
             return 200, "Success"
         except Exception as e:
