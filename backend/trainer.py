@@ -12,13 +12,15 @@ from sklearn.dummy import DummyClassifier
 
 
 RANDOM_SEED = 69
+MAX_NUM_CHARACTERS = 50000
 
 
 def clean_text(t):
     t = re.sub(r"<.*?>", " ", t)
-    t = re.sub(r"[^a-zA-Z0-9.!,?;: ]+", " ", t)
+    # t = re.sub(r"[^a-zA-Z0-9.!,?;: ]+", " ", t)
     t = re.sub(" +", " ", t)
     t = t.lower()
+    t = t[:MAX_NUM_CHARACTERS]
     return t
 
 
