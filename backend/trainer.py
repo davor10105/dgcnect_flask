@@ -9,6 +9,7 @@ import re
 from multiprocessing import Pool
 from model_data import TenderData, CountryModelData, LanguageModelData
 from sklearn.dummy import DummyClassifier
+import os
 
 
 RANDOM_SEED = 69
@@ -24,9 +25,16 @@ def clean_text(t):
     return t
 
 
+TABLE_NAME = "inference"  # os.getenv("TABLE_NAME")
+
+
 class Trainer:
     def return_input(example, language):
-        text = example[3] + example[4]
+        text = (
+            example[3] + example[4]
+            if TABLE_NAME == "dataset"
+            else example[2] + example[3]
+        )
         """text = clean(
             text,
             fix_unicode=True,  # fix various unicode errors
@@ -58,17 +66,28 @@ class Trainer:
     def train(dataset, language, stop_words=[], deleted_words=[]):
         print(deleted_words)
         examples = []
+        inference_examples = []
         print("Cleaning data...")
         for example in tqdm(dataset):
             tokens, lemmatized_tokens = Trainer.return_input(example, language)
-            examples.append(
-                {
-                    "original": " ".join(tokens),
-                    "input_text": " ".join(lemmatized_tokens),
-                    "label": int(example[5]),
-                    "tender_id": str(example[7]),
-                }
-            )
+            if example[5] is not None:
+                examples.append(
+                    {
+                        "original": " ".join(tokens),
+                        "input_text": " ".join(lemmatized_tokens),
+                        "label": int(example[5]),
+                        "tender_id": str(example[7]),
+                    }
+                )
+            else:
+                inference_examples.append(
+                    {
+                        "original": " ".join(tokens),
+                        "input_text": " ".join(lemmatized_tokens),
+                        "label": 2,
+                        "tender_id": str(example[7]),
+                    }
+                )
 
         train_ratio = 0.8
         random.seed(RANDOM_SEED)
@@ -76,12 +95,11 @@ class Trainer:
 
         num_train = int(len(examples) * train_ratio)
         train_examples = examples  # [:num_train] taking everything for train
-        test_examples = examples[num_train:]
+        test_examples = inference_examples
 
         train_texts = [example["input_text"] for example in train_examples]
         train_labels = np.array([example["label"] for example in train_examples])
         test_texts = [example["input_text"] for example in test_examples]
-        test_labels = np.array([example["label"] for example in test_examples])
 
         if len(stop_words + deleted_words) == 0:
             print("Obtaining stop words...")
@@ -98,9 +116,13 @@ class Trainer:
             random_state=RANDOM_SEED, class_weight="balanced", C=0.3
         ).fit(train_features, train_labels)
 
-        all_texts = [example["input_text"] for example in examples]
-        all_tender_ids = [example["tender_id"] for example in examples]
-        all_labels = np.array([example["label"] for example in examples])
+        all_texts = [example["input_text"] for example in examples + inference_examples]
+        all_tender_ids = [
+            example["tender_id"] for example in examples + inference_examples
+        ]
+        all_labels = np.array(
+            [example["label"] for example in examples + inference_examples]
+        )
         all_features = vectorizer.transform(all_texts)
         all_preds = clf.predict(all_features)
 

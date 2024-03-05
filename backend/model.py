@@ -81,11 +81,18 @@ country2language = {
     "MT": "en",
 }
 
+country2language = {
+    "HR": "hbs",
+}
+
+TABLE_NAME = "inference"  # os.getenv("TABLE_NAME")
+
 
 class PostgresCountryModel:
     def __init__(self) -> None:
+        print(f"Connecting to {TABLE_NAME}")
         self.connect_database()
-        self.cur.execute("select distinct country_iso from dataset")
+        self.cur.execute(f"select distinct country_iso from {TABLE_NAME}")
         countries = self.cur.fetchall()
         self.close_database_connection()
 
@@ -112,7 +119,7 @@ class PostgresCountryModel:
                         {language: language_model_data},
                     )
                     current_country_model_data.save()
-                    self.update_predictions(language_model_data.tender_data, country)
+                    # self.update_predictions(language_model_data.tender_data, country)
                 except Exception as e:
                     print(
                         f"The following error occured during preprocessing for country: {country}, error: {e}"
@@ -155,7 +162,7 @@ class PostgresCountryModel:
         ):
             prediction = int(prediction)
             self.cur.execute(
-                f"UPDATE dataset SET innovation_prediction={prediction} WHERE country_iso='{country}' AND dgcnect_tender_id={tender_id}"
+                f"UPDATE {TABLE_NAME} SET innovation_prediction={prediction} WHERE country_iso='{country}' AND dgcnect_tender_id={tender_id}"
             )
         self.conn.commit()
         self.close_database_connection()
@@ -193,13 +200,13 @@ class PostgresCountryModel:
         self.calculate_global_data(country)
 
         tender_data = language_model_data.tender_data
-        self.update_predictions(tender_data, country)
+        # self.update_predictions(tender_data, country)
         print()
 
     def fetch_dataset(self, country):
         print("Fetching data...")
         self.connect_database()
-        self.cur.execute(f"SELECT * FROM dataset where country_iso='{country}'")
+        self.cur.execute(f"SELECT * FROM {TABLE_NAME} where country_iso='{country}'")
         dataset = self.cur.fetchall()
         self.close_database_connection()
 
@@ -208,7 +215,7 @@ class PostgresCountryModel:
     def fetch_tender(self, country, tender_id):
         self.connect_database()
         self.cur.execute(
-            f"SELECT * FROM dataset where country_iso='{country}' AND dgcnect_tender_id={tender_id}"
+            f"SELECT * FROM {TABLE_NAME} where country_iso='{country}' AND dgcnect_tender_id={tender_id}"
         )
         example = self.cur.fetchall()
         self.close_database_connection()
@@ -225,14 +232,17 @@ class PostgresCountryModel:
         features = language_model_data.vectorizer.transform(
             [" ".join(lemmatized_tokens)]
         )
-        pred = language_model_data.classifier.predict(features)[0]
+        # pred = language_model_data.classifier.predict(features)[0]
+        pred_proba = language_model_data.classifier.predict_proba(features)[0]
+        pred_index = pred_proba.argmax(-1)
+        pred = pred_proba[pred_index]
 
-        return tokens, lemmatized_tokens, features, pred
+        return tokens, lemmatized_tokens, features, pred_index, pred
 
     def annotate_tender(self, country, tender_id, annotation):
         self.connect_database()
         self.cur.execute(
-            f"UPDATE dataset SET innovation_label={annotation} WHERE country_iso='{country}' AND dgcnect_tender_id={tender_id}"
+            f"UPDATE {TABLE_NAME} SET innovation_label={annotation} WHERE country_iso='{country}' AND dgcnect_tender_id={tender_id}"
         )
         self.conn.commit()
         self.close_database_connection()
@@ -256,9 +266,12 @@ class PostgresCountryModel:
             ].tender_data
             metadata_dict = {
                 "NumExamples": tender_data.predictions.shape[0],
-                "NumInnovative": tender_data.labels.sum().item(),
+                "NumInnovative": tender_data.labels[tender_data.labels < 2]
+                .sum()
+                .item(),
                 "NumNonInnovative": (
-                    tender_data.predictions.shape[0] - tender_data.labels.sum()
+                    tender_data.predictions.shape[0]
+                    - tender_data.labels[tender_data.labels < 2].sum()
                 ).item(),
             }
             retval.append(
@@ -276,9 +289,10 @@ class PostgresCountryModel:
         tender_data = country_model_data.language_to_model_data[language].tender_data
         metadata_dict = {
             "NumExamples": tender_data.predictions.shape[0],
-            "NumInnovative": tender_data.labels.sum().item(),
+            "NumInnovative": tender_data.labels[tender_data.labels < 2].sum().item(),
             "NumNonInnovative": (
-                tender_data.predictions.shape[0] - tender_data.labels.sum()
+                tender_data.predictions.shape[0]
+                - tender_data.labels[tender_data.labels < 2].sum()
             ).item(),
         }
         selected_prediction_type_dict = {
@@ -286,6 +300,8 @@ class PostgresCountryModel:
             "TrueNegative": [],
             "FalsePositive": [],
             "FalseNegative": [],
+            "UnlabeledPositive": [],
+            "UnlabeledNegative": [],
         }
         for i, (all_label, all_pred, all_tender_id) in enumerate(
             zip(tender_data.labels, tender_data.predictions, tender_data.tender_ids)
@@ -299,13 +315,22 @@ class PostgresCountryModel:
                     selected_prediction_type_dict["FalseNegative"].append(
                         str(all_tender_id)
                     )
-            else:
+            elif all_label == 0:
                 if all_label == all_pred:
                     selected_prediction_type_dict["TrueNegative"].append(
                         str(all_tender_id)
                     )
                 else:
                     selected_prediction_type_dict["FalsePositive"].append(
+                        str(all_tender_id)
+                    )
+            else:
+                if all_pred == 0:
+                    selected_prediction_type_dict["UnlabeledNegative"].append(
+                        str(all_tender_id)
+                    )
+                else:
+                    selected_prediction_type_dict["UnlabeledPositive"].append(
                         str(all_tender_id)
                     )
         self.detailed_country_data[country] = {
@@ -368,9 +393,13 @@ class PostgresCountryModel:
         clf, vectorizer = language_model_data.classifier, language_model_data.vectorizer
 
         example = self.fetch_tender(country, tender_id)
-        original_words, lemma_words, features, tender_prediction = self.infer_model(
-            country, example
-        )
+        (
+            original_words,
+            lemma_words,
+            features,
+            tender_prediction,
+            tender_prediction_probability,
+        ) = self.infer_model(country, example)
 
         # preprocessed_str = vectorizer.build_preprocessor()(" ".join(original_words))
         # original_words = vectorizer.build_tokenizer()(preprocessed_str)
@@ -384,7 +413,9 @@ class PostgresCountryModel:
         lemma_words = vectorizer.build_preprocessor()(" ".join(lemma_words)).split(" ")
 
         tender_prediction = tender_prediction.tolist()
-        tender_label = int(example[5])
+        tender_label = 2
+        if example[5] is not None:
+            tender_label = int(example[5])
         word_scores = features.multiply(clf.coef_[0]).tocsr()
         scored_words = []
         # total_score = features.dot(clf.coef_[0])
@@ -558,5 +589,6 @@ class PostgresCountryModel:
             "WordScores": scored_words,
             "Plot": b64_image,
             "Prediction": tender_prediction,
+            "PredictionProbability": tender_prediction_probability,
             "Label": tender_label,
         }
