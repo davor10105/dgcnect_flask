@@ -81,11 +81,7 @@ country2language = {
     "MT": "en",
 }
 
-country2language = {
-    "HR": "hbs",
-}
-
-TABLE_NAME = "inference"  # os.getenv("TABLE_NAME")
+TABLE_NAME = "dataset"  # os.getenv("TABLE_NAME")
 
 
 class PostgresCountryModel:
@@ -119,7 +115,7 @@ class PostgresCountryModel:
                         {language: language_model_data},
                     )
                     current_country_model_data.save()
-                    # self.update_predictions(language_model_data.tender_data, country)
+                    self.update_predictions(language_model_data.tender_data, country)
                 except Exception as e:
                     print(
                         f"The following error occured during preprocessing for country: {country}, error: {e}"
@@ -200,7 +196,7 @@ class PostgresCountryModel:
         self.calculate_global_data(country)
 
         tender_data = language_model_data.tender_data
-        # self.update_predictions(tender_data, country)
+        self.update_predictions(tender_data, country)
         print()
 
     def fetch_dataset(self, country):

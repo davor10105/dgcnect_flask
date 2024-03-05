@@ -25,7 +25,7 @@ def clean_text(t):
     return t
 
 
-TABLE_NAME = "inference"  # os.getenv("TABLE_NAME")
+TABLE_NAME = "dataset"  # os.getenv("TABLE_NAME")
 
 
 class Trainer:
