@@ -61,7 +61,7 @@ country2language = {
     "LV": "lv",
     "NO": "nn",
     "EL": "el",
-    # "PL": "pl",  # only one class
+    "PL": "pl",
     "SK": "sk",
     # "DK": "da",  # only one class
     "LT": "lt",
