@@ -39,15 +39,26 @@ class Trainer:
         lemmatized_tokens = [lemmatize(token, lang=language) for token in tokens]
         return tokens, lemmatized_tokens
 
+    def check_example(example):
+        if TABLE_NAME == "dataset":
+            if (example[2] is None and example[3] is None and example[4] is None) or (
+                example[2] == "" and example[3] == "" and example[4] == ""
+            ):
+                return False
+        elif TABLE_NAME == "inference":
+            if (example[2] is None and example[3] is None) or (
+                example[2] == "" and example[3] == ""
+            ):
+                return False
+        return True
+
     def train(dataset, language, stop_words=[], deleted_words=[]):
         print(deleted_words)
         examples = []
         inference_examples = []
         print("Cleaning data...")
         for example in tqdm(dataset):
-            if (example[2] is None and example[3] is None) or (
-                example[2] == "" and example[3] == ""
-            ):
+            if not Trainer.check_example(example):
                 continue
             tokens, lemmatized_tokens = Trainer.return_input(example, language)
             if example[5] is not None:
