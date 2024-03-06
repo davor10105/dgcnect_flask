@@ -13,6 +13,7 @@ import codecs
 from model_data import CountryModelData
 from config import NUM_WORDS
 from tqdm import tqdm
+from database_login import TABLE_NAME
 
 
 alpha2name = {
@@ -80,8 +81,6 @@ country2language = {
     "RO": "ro",
     "MT": "en",
 }
-
-TABLE_NAME = "dataset"  # os.getenv("TABLE_NAME")
 
 
 class PostgresCountryModel:

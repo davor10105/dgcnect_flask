@@ -10,6 +10,7 @@ from multiprocessing import Pool
 from model_data import TenderData, CountryModelData, LanguageModelData
 from sklearn.dummy import DummyClassifier
 import os
+from database_login import TABLE_NAME
 
 
 RANDOM_SEED = 69
@@ -25,9 +26,6 @@ def clean_text(t):
     return t
 
 
-TABLE_NAME = "dataset"  # os.getenv("TABLE_NAME")
-
-
 class Trainer:
     def return_input(example, language):
         text = (
@@ -35,28 +33,6 @@ class Trainer:
             if TABLE_NAME == "dataset"
             else example[2] + example[3]
         )
-        """text = clean(
-            text,
-            fix_unicode=True,  # fix various unicode errors
-            to_ascii=False,  # transliterate to closest ASCII representation
-            lower=True,  # lowercase text
-            no_line_breaks=False,  # fully strip line breaks as opposed to only normalizing them
-            no_urls=False,  # replace all URLs with a special token
-            no_emails=False,  # replace all email addresses with a special token
-            no_phone_numbers=False,  # replace all phone numbers with a special token
-            no_numbers=False,  # replace all numbers with a special token
-            no_digits=False,  # replace all digits with a special token
-            no_currency_symbols=False,  # replace all currency symbols with a special token
-            no_punct=False,  # remove punctuations
-            replace_with_punct="",  # instead of removing punctuations you may replace them
-            replace_with_url="<URL>",
-            replace_with_email="<EMAIL>",
-            replace_with_phone_number="<PHONE>",
-            replace_with_number="<NUMBER>",
-            replace_with_digit="0",
-            replace_with_currency_symbol="<CUR>",
-            lang="en",  # set to 'de' for German special handling
-        )"""
         text = clean_text(text)
 
         tokens = simple_tokenizer(text)
@@ -69,6 +45,10 @@ class Trainer:
         inference_examples = []
         print("Cleaning data...")
         for example in tqdm(dataset):
+            if (example[2] is None and example[3] is None) or (
+                example[2] == "" and example[3] == ""
+            ):
+                continue
             tokens, lemmatized_tokens = Trainer.return_input(example, language)
             if example[5] is not None:
                 examples.append(
@@ -93,6 +73,8 @@ class Trainer:
         random.seed(RANDOM_SEED)
         random.shuffle(examples)
 
+        print(len(examples), len(inference_examples))
+
         num_train = int(len(examples) * train_ratio)
         train_examples = examples  # [:num_train] taking everything for train
         test_examples = inference_examples
@@ -110,7 +92,6 @@ class Trainer:
         print("Training model...")
         vectorizer = TfidfVectorizer(stop_words=stop_words + deleted_words)
         train_features = vectorizer.fit_transform(train_texts)
-        test_features = vectorizer.transform(test_texts)
 
         clf = LogisticRegression(
             random_state=RANDOM_SEED, class_weight="balanced", C=0.3
