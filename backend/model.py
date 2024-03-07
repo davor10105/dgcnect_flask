@@ -69,7 +69,7 @@ country2language = {
     "ES": "es",
     "SI": "sl",
     "CZ": "cs",
-    # "IT": "it",  only 11 examples
+    "IT": "it",
     "CY": "el",
     "NL": "nl",
     "SE": "sv",
