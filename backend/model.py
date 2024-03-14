@@ -81,6 +81,8 @@ country2language = {
     "RO": "ro",
     "MT": "en",
     "FR": "fr",
+    "AT": "de",
+    "LU": "de",
 }
 
 
@@ -155,7 +157,11 @@ class PostgresCountryModel:
         self.connect_database()
         print("Updating predictions...")
         for tender_id, prediction, predict_probas in tqdm(
-            zip(tender_data.tender_ids, tender_data.predictions, tender_data.predict_probas)
+            zip(
+                tender_data.tender_ids,
+                tender_data.predictions,
+                tender_data.predict_probas,
+            )
         ):
             self.cur.execute(
                 f"UPDATE {TABLE_NAME} SET innovation_prediction_wo_docs={predict_probas:.5f} WHERE country_iso='{country}' AND dgcnect_tender_id={tender_id}"
