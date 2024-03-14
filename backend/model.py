@@ -80,6 +80,7 @@ country2language = {
     "IE": "en",
     "RO": "ro",
     "MT": "en",
+    "FR": "fr",
 }
 
 
