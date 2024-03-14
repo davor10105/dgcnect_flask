@@ -152,14 +152,18 @@ class PostgresCountryModel:
 
     def update_predictions(self, tender_data, country):
         self.connect_database()
-        for tender_id, prediction in tqdm(
-            zip(tender_data.tender_ids, tender_data.predictions)
+        print("Updating predictions...")
+        for tender_id, prediction, predict_probas in tqdm(
+            zip(tender_data.tender_ids, tender_data.predictions, tender_data.predict_probas)
         ):
+            self.cur.execute(
+                f"UPDATE {TABLE_NAME} SET innovation_prediction_wo_docs={predict_probas:.5f} WHERE country_iso='{country}' AND dgcnect_tender_id={tender_id}"
+            )
             prediction = int(prediction)
             self.cur.execute(
                 f"UPDATE {TABLE_NAME} SET innovation_prediction={prediction} WHERE country_iso='{country}' AND dgcnect_tender_id={tender_id}"
             )
-        self.conn.commit()
+            self.conn.commit()
         self.close_database_connection()
 
     def retrain_country(self, country, deleted_words=[], reenabled_words=[]):

@@ -117,8 +117,9 @@ class Trainer:
         )
         all_features = vectorizer.transform(all_texts)
         all_preds = clf.predict(all_features)
+        all_predict_probas = clf.predict_proba(all_features)[:,1]
 
-        tender_data = TenderData(all_features, all_preds, all_labels, all_tender_ids)
+        tender_data = TenderData(all_features, all_preds, all_predict_probas, all_labels, all_tender_ids)
         language_model_data = LanguageModelData(
             clf, vectorizer, stop_words, deleted_words, tender_data
         )

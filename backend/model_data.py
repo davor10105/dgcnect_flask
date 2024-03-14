@@ -12,9 +12,10 @@ class LanguageModelData:
 
 
 class TenderData:
-    def __init__(self, features, predictions, labels, tender_ids):
+    def __init__(self, features, predictions, predict_probas, labels, tender_ids):
         self.features = features
         self.predictions = predictions
+        self.predict_probas = predict_probas
         self.labels = labels
         self.tender_ids = tender_ids
 
