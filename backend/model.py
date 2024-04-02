@@ -50,6 +50,11 @@ alpha2name = {
     "IE": "Ireland",
     "RO": "Romania",
     "MT": "Malta",
+    "FR": "France",
+    "AT": "Austria",
+    "LU": "Luxembourg",
+    "UK": "United Kingdom",
+    "CH": "Switzerland",
 }
 
 # map country to language tokenizer
@@ -83,6 +88,13 @@ country2language = {
     "FR": "fr",
     "AT": "de",
     "LU": "de",
+    "UK": "en",
+    "CH": "fr",
+}
+
+country2language = {
+    "UK": "en",
+    "CH": "fr",
 }
 
 
